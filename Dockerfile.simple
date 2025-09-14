@@ -1,0 +1,38 @@
+# Simple single-stage Dockerfile for MCP Salesforce HTTP Server
+FROM node:22-alpine
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S mcpuser -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy all files
+COPY . .
+
+# Install dependencies and build
+RUN npm install && \
+    npm run build && \
+    npm prune --production && \
+    npm cache clean --force
+
+# Change ownership to non-root user
+RUN chown -R mcpuser:nodejs /app
+USER mcpuser
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["node", "dist/http-server.js"]

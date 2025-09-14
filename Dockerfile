@@ -8,8 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Install dependencies (use npm ci if package-lock.json exists, otherwise npm install)
-RUN if [ -f package-lock.json ]; then npm ci --only=production; else npm install --only=production; fi && npm cache clean --force
+# Install ALL dependencies (including devDependencies needed for building)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi && npm cache clean --force
 
 # Copy source code
 COPY src/ ./src/
@@ -30,7 +30,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy package files and install production dependencies
+# Copy package files and install production dependencies only
 COPY package*.json ./
 COPY --from=builder /app/package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci --only=production; else npm install --only=production; fi && npm cache clean --force
