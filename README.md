@@ -143,6 +143,91 @@ Manage debug logs for Salesforce users:
 
 ## Setup
 
+### HTTP Server for LangChain Integration
+
+To use this MCP server with LangChain or other HTTP clients instead of Claude Desktop:
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Build the project:**
+   ```bash
+   npm run build
+   ```
+
+3. **Configure environment variables:**
+   Copy `.env.example` to `.env` and configure your settings:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Start the HTTP server:**
+   ```bash
+   npm run start:http
+   ```
+
+   The server will start on `http://localhost:3000` by default.
+
+5. **Test the server:**
+   ```bash
+   curl http://localhost:3000/health
+   curl http://localhost:3000/tools
+   ```
+
+#### HTTP API Endpoints
+
+- `GET /health` - Health check endpoint
+- `GET /tools` - List all available tools with their schemas
+- `POST /tools/{toolName}` - Execute a specific tool with JSON body containing arguments
+
+#### Example HTTP Tool Usage
+
+```bash
+# Search for objects
+curl -X POST http://localhost:3000/tools/salesforce_search_objects \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"searchPattern": "Account"}'
+
+# Query records  
+curl -X POST http://localhost:3000/tools/salesforce_query_records \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "objectName": "Account", 
+    "fields": ["Name", "Type", "Industry"],
+    "limit": 5
+  }'
+```
+
+#### HTTP Server Configuration
+
+The HTTP server can be configured via environment variables:
+
+- `PORT` - Server port (default: 3000)
+- `API_KEY` - Optional API key for authentication 
+- `ALLOWED_ORIGINS` - CORS allowed origins (comma-separated)
+
+#### Security Considerations
+
+- **API Key Authentication**: Set `API_KEY` environment variable to require authentication
+- **CORS**: Configure `ALLOWED_ORIGINS` to limit which domains can access your server
+- **Network**: Consider running behind a reverse proxy (nginx) for production use
+- **Firewall**: Limit access to trusted networks/IP addresses
+
+#### LangChain Integration Examples
+
+See the `examples/` directory for complete integration examples:
+- `examples/langchain-integration.py` - Python/LangChain integration  
+- `examples/langchain-integration.js` - Node.js/LangChain integration
+
+Both examples demonstrate:
+- Creating LangChain tools that call the MCP server via HTTP
+- Setting up an AI agent with Salesforce capabilities
+- Interactive CLI for testing Salesforce operations
+
 ### Salesforce Authentication
 You can connect to Salesforce using one of three authentication methods:
 
