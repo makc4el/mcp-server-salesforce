@@ -4,6 +4,8 @@
 
 An MCP (Model Context Protocol) server implementation that integrates Claude with Salesforce, enabling natural language interactions with your Salesforce data and metadata. This server allows Claude to query, modify, and manage your Salesforce objects and records using everyday language.
 
+**New in this version**: HTTP server support for deployment on cloud hosting platforms like Cloudways, with REST API endpoints for all Salesforce operations.
+
 <a href="https://glama.ai/mcp/servers/kqeniawbr6">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/kqeniawbr6/badge" alt="Salesforce Server MCP server" />
 </a>
@@ -19,11 +21,22 @@ An MCP (Model Context Protocol) server implementation that integrates Claude wit
 * **Apex Code Management**: Read, create, and update Apex classes and triggers
 * **Intuitive Error Handling**: Clear feedback with Salesforce-specific error details
 * **Switchable Authentication**: Supports multiple orgs. Easily switch your active Salesforce org based on the default org configured in your VS Code workspace (use Salesforce_CLI authentication for this feature).
+* **HTTP Server Support**: Deploy as a REST API server on cloud platforms like Cloudways
+* **Production Ready**: Includes PM2 process management, Nginx configuration, and deployment scripts
 
 ## Installation
 
+### For Claude Desktop (MCP Protocol)
 ```bash
 npm install -g @tsmztech/mcp-server-salesforce
+```
+
+### For HTTP Server Deployment
+```bash
+git clone https://github.com/tsmztech/mcp-server-salesforce.git
+cd mcp-server-salesforce
+npm install
+npm run build
 ```
 
 ## Tools
@@ -164,8 +177,9 @@ You can connect to Salesforce using one of three authentication methods:
 
 
 
-### Usage with Claude Desktop
+## Usage
 
+### Option 1: Claude Desktop (MCP Protocol)
 
 Add to your `claude_desktop_config.json`:
 
@@ -223,6 +237,117 @@ Add to your `claude_desktop_config.json`:
 ```
 
 > **Note**: For OAuth 2.0 Client Credentials Flow, the `SALESFORCE_INSTANCE_URL` must be your exact Salesforce instance URL (e.g., `https://your-domain.my.salesforce.com`). The token endpoint will be constructed as `<instance_url>/services/oauth2/token`.
+
+### Option 2: HTTP Server Deployment
+
+Deploy the server as a REST API on cloud platforms like Cloudways, AWS, or any Node.js hosting provider.
+
+#### Quick Start with HTTP Server
+
+1. **Environment Setup**:
+```bash
+cp env.example .env
+# Edit .env with your Salesforce credentials
+```
+
+2. **Start Local Development Server**:
+```bash
+npm run start:http
+```
+
+3. **Production Deployment**:
+```bash
+npm run start:prod
+```
+
+#### API Endpoints
+
+- **Health Check**: `GET /health`
+- **List Tools**: `GET /tools`
+- **Execute Tool**: `POST /tools/{toolName}`
+
+#### Example HTTP API Usage
+
+```bash
+# Health Check
+curl https://your-server.com/health
+
+# List available tools
+curl https://your-server.com/tools
+
+# Search for Salesforce objects
+curl -X POST https://your-server.com/tools/salesforce_search_objects \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"searchPattern": "Account"}'
+
+# Query records
+curl -X POST https://your-server.com/tools/salesforce_query_records \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "objectName": "Account",
+    "fields": ["Id", "Name", "Type"],
+    "limit": 10
+  }'
+```
+
+#### Environment Variables for HTTP Server
+
+Create a `.env` file (copy from `env.example`):
+
+```env
+# Salesforce Connection
+SALESFORCE_LOGIN_URL=https://login.salesforce.com
+SALESFORCE_USERNAME=your-username@company.com
+SALESFORCE_PASSWORD=your-password
+SALESFORCE_SECURITY_TOKEN=your-security-token
+
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+
+# Security (recommended for production)
+API_KEY=your-secure-api-key-here
+
+# CORS Settings
+ALLOWED_ORIGINS=*
+```
+
+#### Cloudways Deployment
+
+For detailed Cloudways deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+**Quick Deploy to Cloudways**:
+
+1. Upload your code to Cloudways application
+2. Run the deployment script:
+```bash
+chmod +x cloudways-deploy.sh
+./cloudways-deploy.sh
+```
+
+The script will:
+- Install dependencies
+- Build the project
+- Configure PM2 process management
+- Start the HTTP server
+- Provide monitoring commands
+
+#### Production Management
+
+```bash
+# Process Management with PM2
+npm run pm2:start    # Start the server
+npm run pm2:stop     # Stop the server
+npm run pm2:restart  # Restart the server
+npm run pm2:logs     # View logs
+npm run pm2:monit    # Monitor resources
+
+# Direct server commands
+npm run start:http   # Development server
+npm run start:prod   # Production server
+```
 
 ## Example Usage
 
