@@ -2,11 +2,19 @@
 
 ## Overview
 
-This Salesforce MCP Server supports **dynamic configuration**, allowing AI agents to connect to different Salesforce orgs by providing credentials at runtime. This enables multi-tenant usage where each AI agent can work with its own Salesforce org.
+This Salesforce MCP Server operates in **DYNAMIC-ONLY mode**, designed specifically for AI agents to connect to different Salesforce orgs by providing credentials at runtime. This enables true multi-tenant usage where each AI agent works with its own Salesforce org.
+
+**Key Features:**
+- 🚫 **No static credentials** - Zero server-side Salesforce configuration needed
+- 🤖 **AI agent first** - Built for dynamic credential provision
+- 🏢 **Multi-tenant** - Each request can use different Salesforce orgs
+- 🚀 **Railway ready** - Deploy without any Salesforce setup
 
 ## Deployment
 
 ### Railway Deployment (Recommended)
+
+**Super Simple Deployment** - No Salesforce configuration needed!
 
 1. **Deploy to Railway:**
    ```bash
@@ -16,24 +24,25 @@ This Salesforce MCP Server supports **dynamic configuration**, allowing AI agent
    railway up
    ```
 
-2. **Set optional environment variables:**
+2. **Optional: Set security variables (recommended for production):**
    ```bash
-   # Optional: Default credentials (fallback)
-   railway variables set SALESFORCE_INSTANCE_URL=https://your-org.my.salesforce.com
-   railway variables set SALESFORCE_ACCESS_TOKEN=your_default_token
-   
-   # Optional: API security
+   # Optional: API security  
    railway variables set API_KEY=your_secret_api_key
    railway variables set ALLOWED_ORIGINS=https://your-app.com
-   
-   # Server config
    railway variables set PORT=3000
    ```
 
-3. **Get your deployment URL:**
+3. **That's it! 🎉**
    ```
-   https://your-app.railway.app
+   Your server: https://your-app.railway.app
+   No Salesforce setup required on the server side!
    ```
+
+**🚫 What you DON'T need:**
+- ❌ `SALESFORCE_INSTANCE_URL` - AI agents provide this
+- ❌ `SALESFORCE_ACCESS_TOKEN` - AI agents provide this  
+- ❌ `SALESFORCE_REFRESH_TOKEN` - AI agents provide this
+- ❌ Connected App setup on server - AI agents handle authentication
 
 ## AI Agent Usage
 

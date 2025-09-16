@@ -1,7 +1,7 @@
 {
     "name": "@tsmztech/mcp-server-salesforce",
-    "version": "0.0.3",
-    "description": "A Salesforce connector MCP Server.",
+    "version": "2.0.0",
+    "description": "A dynamic multi-tenant Salesforce MCP Server for AI agents.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "type": "module",
@@ -25,8 +25,11 @@
     "keywords": [
       "mcp",
       "salesforce",
-      "claude",
-      "ai"
+      "ai-agent",
+      "multi-tenant",
+      "dynamic-credentials",
+      "railway",
+      "claude"
     ],
     "author": "tsmztech",
     "license": "MIT",

@@ -8,7 +8,6 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import * as dotenv from "dotenv";
 
-import { createSalesforceConnection } from "./utils/connection.js";
 import { 
   createDynamicSalesforceConnection, 
   validateDynamicCredentials,
@@ -32,7 +31,7 @@ import { MANAGE_DEBUG_LOGS, handleManageDebugLogs, ManageDebugLogsArgs } from ".
 
 dotenv.config();
 
-// Helper function to create Salesforce connection for MCP requests
+// Helper function to create Salesforce connection for MCP requests (dynamic only)
 async function createSalesforceConnectionForMCP(args: any) {
   // Check if dynamic credentials are provided in the request arguments
   if (args && args._salesforceCredentials && validateDynamicCredentials(args._salesforceCredentials)) {
@@ -40,15 +39,24 @@ async function createSalesforceConnectionForMCP(args: any) {
     return await createDynamicSalesforceConnection(args._salesforceCredentials as DynamicSalesforceCredentials);
   }
   
-  // Fall back to static environment configuration
-  console.log('📝 Using static environment configuration for MCP');
-  return await createSalesforceConnection();
+  throw new Error(
+    'No Salesforce credentials provided. This MCP server requires dynamic credentials.\n' +
+    'Please include "_salesforceCredentials" in your request arguments:\n' +
+    '{\n' +
+    '  "objectName": "Lead",\n' +
+    '  "fields": ["Id", "Name"],\n' +
+    '  "_salesforceCredentials": {\n' +
+    '    "instanceUrl": "https://your-org.my.salesforce.com",\n' +
+    '    "accessToken": "your_access_token_here"\n' +
+    '  }\n' +
+    '}'
+  );
 }
 
 const server = new Server(
   {
-    name: "salesforce-mcp-server",
-    version: "1.0.0",
+    name: "salesforce-ai-agent-mcp-server",
+    version: "2.0.0",
   },
   {
     capabilities: {

@@ -3,7 +3,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import * as dotenv from "dotenv";
-import { createSalesforceConnection } from "./utils/connection.js";
 import { 
   createDynamicSalesforceConnection, 
   extractCredentialsFromHeaders, 
@@ -31,19 +30,23 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Helper function to create Salesforce connection (dynamic or static)
+// Helper function to create Salesforce connection (dynamic only)
 async function createSalesforceConnectionForRequest(req: Request) {
-  // First try to get dynamic credentials from headers
+  // Get dynamic credentials from headers
   const dynamicCredentials = extractCredentialsFromHeaders(req.headers);
   
-  if (dynamicCredentials) {
-    console.log('🎯 Using dynamic credentials from AI agent');
-    return await createDynamicSalesforceConnection(dynamicCredentials);
+  if (!dynamicCredentials) {
+    throw new Error(
+      'No Salesforce credentials provided. This server requires dynamic credentials from AI agents.\n' +
+      'Please include credentials using one of these methods:\n' +
+      '1. X-Salesforce-Credentials header with JSON: {"instanceUrl":"...","accessToken":"..."}\n' +
+      '2. X-Salesforce-Instance-Url + Authorization: Bearer <token>\n' +
+      '3. Individual headers: X-Salesforce-Instance-Url, X-Salesforce-Access-Token'
+    );
   }
   
-  // Fall back to static environment configuration
-  console.log('📝 Using static environment configuration');
-  return await createSalesforceConnection();
+  console.log('🎯 Using dynamic credentials from AI agent');
+  return await createDynamicSalesforceConnection(dynamicCredentials);
 }
 
 // Middleware
@@ -86,11 +89,12 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    server: 'mcp-salesforce-http-server',
+    server: 'mcp-salesforce-ai-agent-server',
+    mode: 'dynamic-only',
     features: {
-      staticCredentials: !!(process.env.SALESFORCE_INSTANCE_URL && process.env.SALESFORCE_ACCESS_TOKEN),
       dynamicCredentials: true,
-      aiAgentCompatible: true
+      aiAgentCompatible: true,
+      multiTenant: true
     }
   });
 });
