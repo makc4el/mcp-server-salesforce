@@ -9,6 +9,11 @@ import {
 import * as dotenv from "dotenv";
 
 import { createSalesforceConnection } from "./utils/connection.js";
+import { 
+  createDynamicSalesforceConnection, 
+  validateDynamicCredentials,
+  DynamicSalesforceCredentials 
+} from "./utils/dynamic-connection.js";
 import { SEARCH_OBJECTS, handleSearchObjects } from "./tools/search.js";
 import { DESCRIBE_OBJECT, handleDescribeObject } from "./tools/describe.js";
 import { QUERY_RECORDS, handleQueryRecords, QueryArgs } from "./tools/query.js";
@@ -26,6 +31,19 @@ import { EXECUTE_ANONYMOUS, handleExecuteAnonymous, ExecuteAnonymousArgs } from 
 import { MANAGE_DEBUG_LOGS, handleManageDebugLogs, ManageDebugLogsArgs } from "./tools/manageDebugLogs.js";
 
 dotenv.config();
+
+// Helper function to create Salesforce connection for MCP requests
+async function createSalesforceConnectionForMCP(args: any) {
+  // Check if dynamic credentials are provided in the request arguments
+  if (args && args._salesforceCredentials && validateDynamicCredentials(args._salesforceCredentials)) {
+    console.log('🎯 Using dynamic credentials from MCP request');
+    return await createDynamicSalesforceConnection(args._salesforceCredentials as DynamicSalesforceCredentials);
+  }
+  
+  // Fall back to static environment configuration
+  console.log('📝 Using static environment configuration for MCP');
+  return await createSalesforceConnection();
+}
 
 const server = new Server(
   {
@@ -65,7 +83,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     if (!args) throw new Error('Arguments are required');
 
-    const conn = await createSalesforceConnection();
+    const conn = await createSalesforceConnectionForMCP(args);
 
     switch (name) {
       case "salesforce_search_objects": {

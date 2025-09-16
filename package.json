@@ -17,7 +17,10 @@
     "watch": "tsc --watch",
     "test": "node --test",
     "serve": "node dist/http-server.js",
-    "dev": "npm run build && npm run serve"
+    "dev": "npm run build && npm run serve",
+    "start": "npm run serve",
+    "railway:build": "npm run build",
+    "railway:start": "npm run serve"
   },
     "keywords": [
       "mcp",

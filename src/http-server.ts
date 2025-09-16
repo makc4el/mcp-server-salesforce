@@ -4,6 +4,12 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import * as dotenv from "dotenv";
 import { createSalesforceConnection } from "./utils/connection.js";
+import { 
+  createDynamicSalesforceConnection, 
+  extractCredentialsFromHeaders, 
+  validateDynamicCredentials,
+  DynamicSalesforceCredentials 
+} from "./utils/dynamic-connection.js";
 import { SEARCH_OBJECTS, handleSearchObjects } from "./tools/search.js";
 import { DESCRIBE_OBJECT, handleDescribeObject } from "./tools/describe.js";
 import { QUERY_RECORDS, handleQueryRecords, QueryArgs } from "./tools/query.js";
@@ -24,6 +30,21 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Helper function to create Salesforce connection (dynamic or static)
+async function createSalesforceConnectionForRequest(req: Request) {
+  // First try to get dynamic credentials from headers
+  const dynamicCredentials = extractCredentialsFromHeaders(req.headers);
+  
+  if (dynamicCredentials) {
+    console.log('🎯 Using dynamic credentials from AI agent');
+    return await createDynamicSalesforceConnection(dynamicCredentials);
+  }
+  
+  // Fall back to static environment configuration
+  console.log('📝 Using static environment configuration');
+  return await createSalesforceConnection();
+}
 
 // Middleware
 app.use(cors({
@@ -65,8 +86,80 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    server: 'mcp-salesforce-http-server'
+    server: 'mcp-salesforce-http-server',
+    features: {
+      staticCredentials: !!(process.env.SALESFORCE_INSTANCE_URL && process.env.SALESFORCE_ACCESS_TOKEN),
+      dynamicCredentials: true,
+      aiAgentCompatible: true
+    }
   });
+});
+
+// AI Agent connection test endpoint
+app.post('/ai-agent/test-connection', async (req: Request, res: Response) => {
+  try {
+    const dynamicCredentials = extractCredentialsFromHeaders(req.headers);
+    
+    if (!dynamicCredentials) {
+      return res.status(400).json({
+        success: false,
+        error: 'No dynamic credentials provided. Use headers: X-Salesforce-Credentials (JSON) or X-Salesforce-Instance-Url + Authorization Bearer token',
+        examples: {
+          method1: 'X-Salesforce-Credentials: {"instanceUrl":"https://your-org.my.salesforce.com","accessToken":"your_token"}',
+          method2: 'X-Salesforce-Instance-Url: https://your-org.my.salesforce.com, Authorization: Bearer your_token'
+        }
+      });
+    }
+
+    console.log('🧪 AI Agent testing connection with dynamic credentials');
+    const conn = await createDynamicSalesforceConnection(dynamicCredentials);
+    const identity = await conn.identity();
+
+    res.json({
+      success: true,
+      message: 'AI Agent connection successful',
+      org: {
+        username: identity.username,
+        orgId: identity.organization_id,
+        displayName: identity.display_name,
+        instanceUrl: dynamicCredentials.instanceUrl
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('AI Agent connection test failed:', error);
+    res.status(401).json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// AI Agent credentials validation endpoint
+app.post('/ai-agent/validate-credentials', (req: Request, res: Response) => {
+  const credentials = req.body;
+  
+  if (validateDynamicCredentials(credentials)) {
+    res.json({
+      success: true,
+      message: 'Credentials format is valid',
+      hasAccessToken: !!credentials.accessToken,
+      hasRefreshToken: !!credentials.refreshToken,
+      hasClientCredentials: !!(credentials.clientId && credentials.clientSecret)
+    });
+  } else {
+    res.status(400).json({
+      success: false,
+      error: 'Invalid credentials format',
+      required: 'Either accessToken OR (refreshToken + clientId + clientSecret)',
+      example: {
+        instanceUrl: 'https://your-org.my.salesforce.com',
+        accessToken: 'your_access_token_here'
+      }
+    });
+  }
 });
 
 // List all available tools
@@ -112,7 +205,7 @@ app.post('/tools/:toolName', async (req: Request, res: Response) => {
       });
     }
 
-    const conn = await createSalesforceConnection();
+    const conn = await createSalesforceConnectionForRequest(req);
     let result: any;
 
     switch (toolName) {
