@@ -3,12 +3,11 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+# Copy package files (including package-lock.json)
+COPY package.json package-lock.json tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY src/ ./src/
@@ -21,11 +20,11 @@ FROM node:18-alpine AS production
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files explicitly
+COPY package.json package-lock.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy built application
 COPY --from=builder /app/dist ./dist

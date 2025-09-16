@@ -1,0 +1,20 @@
+# Ignore development files and build artifacts
+node_modules
+dist
+.env*
+.git
+.gitignore
+*.md
+test/
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/
+.idea/
+
+# Keep these essential files
+!package.json
+!package-lock.json
+!tsconfig.json
+!src/
+!railway.json
