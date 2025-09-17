@@ -144,33 +144,22 @@ Manage debug logs for Salesforce users:
 ## Setup
 
 ### Salesforce Authentication
-You can connect to Salesforce using one of three authentication methods:
+The server uses **Direct Token Authentication** only, which is the simplest and most reliable method.
 
-#### 1. Username/Password Authentication (Default)
-1. Set up your Salesforce credentials
-2. Get your security token (Reset from Salesforce Settings)
-
-#### 2. OAuth 2.0 Client Credentials Flow
-1. Create a Connected App in Salesforce
-2. Enable OAuth settings and select "Client Credentials Flow"
-3. Set appropriate scopes (typically "api" is sufficient)
-4. Save the Client ID and Client Secret
-5. **Important**: Note your instance URL (e.g., `https://your-domain.my.salesforce.com`) as it's required for authentication
-
-#### 3. Salesforce CLI Authentication (Recommended for local/dev) (contribution by @andrea9293)
-1. Install and authenticate Salesforce CLI (`sf`).
-2. Make sure your org is authenticated and accessible via `sf org display --json` in the root of your Salesforce project.
-3. The server will automatically retrieve the access token and instance url using the CLI.
+#### Direct Token Authentication (Only Supported Method)
+1. Obtain your Salesforce instance URL and access token
+2. You can get an access token from:
+   - **Salesforce CLI**: `sf org display --verbose` (look for Access Token)
+   - Connected App authentication flow
+   - OAuth authorization flow
+3. This method is simple, reliable, and perfect for both development and production use
 
 
 
 ### Usage with Claude Desktop
 
-
 Add to your `claude_desktop_config.json`:
 
-
-#### For Salesforce CLI Authentication:
 ```json
 {
   "mcpServers": {
@@ -178,51 +167,128 @@ Add to your `claude_desktop_config.json`:
       "command": "npx",
       "args": ["-y", "@tsmztech/mcp-server-salesforce"],
       "env": {
-        "SALESFORCE_CONNECTION_TYPE": "Salesforce_CLI"
+        "SALESFORCE_INSTANCE_URL": "https://your-domain.my.salesforce.com",
+        "SALESFORCE_ACCESS_TOKEN": "your_access_token_here"
       }
     }
   }
 }
 ```
 
-#### For Username/Password Authentication:
-```json
-{
-  "mcpServers": {
-    "salesforce": {
-      "command": "npx",
-      "args": ["-y", "@tsmztech/mcp-server-salesforce"],
-      "env": {
-        "SALESFORCE_CONNECTION_TYPE": "User_Password",
-        "SALESFORCE_USERNAME": "your_username",
-        "SALESFORCE_PASSWORD": "your_password",
-        "SALESFORCE_TOKEN": "your_security_token",
-        "SALESFORCE_INSTANCE_URL": "org_url"        // Optional. Default value: https://login.salesforce.com
-      }
-    }
-  }
-}
+### Usage as HTTP Server (Alternative to Claude Desktop)
+
+The Salesforce MCP Server can also run as a standalone HTTP server, making it accessible to any application that can make HTTP requests. This is especially useful for web applications, custom integrations, or when you want to use the server independently from Claude Desktop.
+
+#### Quick Start (HTTP Server)
+
+1. **Install dependencies:**
+   ```bash
+   npm install -g @tsmztech/mcp-server-salesforce
+   ```
+
+2. **Create configuration file:**
+   Copy the example configuration:
+   ```bash
+   cp example.env .env
+   ```
+
+3. **Configure your Salesforce connection:**
+   Edit `.env` file:
+   ```bash
+   # Direct Token authentication (only supported method)
+   SALESFORCE_INSTANCE_URL=https://your-domain.my.salesforce.com
+   SALESFORCE_ACCESS_TOKEN=your_access_token_here
+
+   # HTTP Server settings
+   PORT=3000
+   # API_KEY=your-secret-api-key  # Optional authentication
+   ```
+
+4. **Start the HTTP server:**
+   ```bash
+   npm run build && npm run serve
+   ```
+
+5. **Test the server:**
+   ```bash
+   # Health check
+   curl http://localhost:3000/health
+   
+   # List available tools
+   curl http://localhost:3000/tools
+   ```
+
+#### HTTP API Usage
+
+The HTTP server exposes all MCP tools as REST endpoints:
+
+- **GET /health** - Health check endpoint
+- **GET /tools** - List all available tools
+- **POST /tools/{toolName}** - Execute a specific tool
+
+#### Example HTTP Requests
+
+**Query Salesforce records:**
+```bash
+curl -X POST http://localhost:3000/tools/salesforce_query_records \
+  -H "Content-Type: application/json" \
+  -d '{
+    "objectName": "Account",
+    "fields": ["Id", "Name", "Industry"],
+    "limit": 5
+  }'
 ```
 
-#### For OAuth 2.0 Client Credentials Flow:
-```json
-{
-  "mcpServers": {
-    "salesforce": {
-      "command": "npx",
-      "args": ["-y", "@tsmztech/mcp-server-salesforce"],
-      "env": {
-        "SALESFORCE_CONNECTION_TYPE": "OAuth_2.0_Client_Credentials",
-        "SALESFORCE_CLIENT_ID": "your_client_id",
-        "SALESFORCE_CLIENT_SECRET": "your_client_secret",
-        "SALESFORCE_INSTANCE_URL": "https://your-domain.my.salesforce.com"  // REQUIRED: Must be your exact Salesforce instance URL
-      }
-    }
-  }
-}
+**Search for objects:**
+```bash
+curl -X POST http://localhost:3000/tools/salesforce_search_objects \
+  -H "Content-Type: application/json" \
+  -d '{
+    "searchPattern": "Account"
+  }'
 ```
 
-> **Note**: For OAuth 2.0 Client Credentials Flow, the `SALESFORCE_INSTANCE_URL` must be your exact Salesforce instance URL (e.g., `https://your-domain.my.salesforce.com`). The token endpoint will be constructed as `<instance_url>/services/oauth2/token`.
+**Describe an object:**
+```bash
+curl -X POST http://localhost:3000/tools/salesforce_describe_object \
+  -H "Content-Type: application/json" \
+  -d '{
+    "objectName": "Contact"
+  }'
+```
+
+#### Authentication for HTTP Server
+
+The HTTP server supports optional API key authentication:
+
+```bash
+# Set API key in .env file
+API_KEY=your-secret-api-key
+
+# Include API key in requests
+curl -X POST http://localhost:3000/tools/salesforce_query_records \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-api-key" \
+  -d '{"objectName": "Account", "fields": ["Id", "Name"]}'
+```
+
+#### CORS Configuration
+
+Configure allowed origins for browser-based applications:
+
+```bash
+# In .env file
+ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
+```
+
+#### Available Scripts
+
+```bash
+npm run build    # Build TypeScript to JavaScript
+npm run serve    # Start HTTP server (requires build first)
+npm run dev      # Build and start server in one command
+npm run watch    # Watch for TypeScript changes
+```
 
 ## Example Usage
 
