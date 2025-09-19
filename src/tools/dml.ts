@@ -12,6 +12,14 @@ export const DML_RECORDS: Tool = {
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       operation: {
         type: "string",
         enum: ["insert", "update", "delete", "upsert"],
@@ -32,11 +40,13 @@ export const DML_RECORDS: Tool = {
         optional: true
       }
     },
-    required: ["operation", "objectName", "records"]
+    required: ["instanceUrl", "accessToken", "operation", "objectName", "records"]
   }
 };
 
 export interface DMLArgs {
+  instanceUrl?: string;  // Optional since it's handled at request level
+  accessToken?: string;   // Optional since it's handled at request level
   operation: 'insert' | 'update' | 'delete' | 'upsert';
   objectName: string;
   records: Record<string, any>[];

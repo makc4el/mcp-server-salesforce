@@ -7,12 +7,20 @@ export const DESCRIBE_OBJECT: Tool = {
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       objectName: {
         type: "string",
         description: "API name of the object (e.g., 'Account', 'Contact', 'Custom_Object__c')"
       }
     },
-    required: ["objectName"]
+    required: ["instanceUrl", "accessToken", "objectName"]
   }
 };
 

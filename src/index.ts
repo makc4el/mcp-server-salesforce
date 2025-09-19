@@ -65,33 +65,47 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     if (!args) throw new Error('Arguments are required');
 
-    const conn = await createSalesforceConnection();
+    // Extract auth credentials from tool call arguments (per-request authentication)
+    const { instanceUrl, accessToken, ...toolArgs } = args as Record<string, any>;
+    
+    if (!instanceUrl || !accessToken) {
+      throw new Error(
+        'instanceUrl and accessToken are required in tool call arguments. ' +
+        'These should be obtained from your external authentication provider (e.g., Supabase callback).'
+      );
+    }
+
+    const conn = await createSalesforceConnection({
+      instanceUrl: instanceUrl as string,
+      accessToken: accessToken as string
+    });
 
     switch (name) {
       case "salesforce_search_objects": {
-        const { searchPattern } = args as { searchPattern: string };
+        const { searchPattern } = toolArgs as { searchPattern: string };
         if (!searchPattern) throw new Error('searchPattern is required');
         return await handleSearchObjects(conn, searchPattern);
       }
 
       case "salesforce_describe_object": {
-        const { objectName } = args as { objectName: string };
+        const { objectName } = toolArgs as { objectName: string };
         if (!objectName) throw new Error('objectName is required');
         return await handleDescribeObject(conn, objectName);
       }
 
       case "salesforce_query_records": {
-        const queryArgs = args as Record<string, unknown>;
-        if (!queryArgs.objectName || !Array.isArray(queryArgs.fields)) {
+        if (!toolArgs.objectName || !Array.isArray(toolArgs.fields)) {
           throw new Error('objectName and fields array are required for query');
         }
-        // Type check and conversion
+        // Type check and conversion - include auth parameters for the handler
         const validatedArgs: QueryArgs = {
-          objectName: queryArgs.objectName as string,
-          fields: queryArgs.fields as string[],
-          whereClause: queryArgs.whereClause as string | undefined,
-          orderBy: queryArgs.orderBy as string | undefined,
-          limit: queryArgs.limit as number | undefined
+          instanceUrl: instanceUrl as string,
+          accessToken: accessToken as string,
+          objectName: toolArgs.objectName as string,
+          fields: toolArgs.fields as string[],
+          whereClause: toolArgs.whereClause as string | undefined,
+          orderBy: toolArgs.orderBy as string | undefined,
+          limit: toolArgs.limit as number | undefined
         };
         return await handleQueryRecords(conn, validatedArgs);
       }
@@ -115,15 +129,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "salesforce_dml_records": {
-        const dmlArgs = args as Record<string, unknown>;
-        if (!dmlArgs.operation || !dmlArgs.objectName || !Array.isArray(dmlArgs.records)) {
+        if (!toolArgs.operation || !toolArgs.objectName || !Array.isArray(toolArgs.records)) {
           throw new Error('operation, objectName, and records array are required for DML');
         }
         const validatedArgs: DMLArgs = {
-          operation: dmlArgs.operation as 'insert' | 'update' | 'delete' | 'upsert',
-          objectName: dmlArgs.objectName as string,
-          records: dmlArgs.records as Record<string, any>[],
-          externalIdField: dmlArgs.externalIdField as string | undefined
+          operation: toolArgs.operation as 'insert' | 'update' | 'delete' | 'upsert',
+          objectName: toolArgs.objectName as string,
+          records: toolArgs.records as Record<string, any>[],
+          externalIdField: toolArgs.externalIdField as string | undefined
         };
         return await handleDMLRecords(conn, validatedArgs);
       }

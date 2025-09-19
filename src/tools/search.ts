@@ -7,12 +7,20 @@ export const SEARCH_OBJECTS: Tool = {
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       searchPattern: {
         type: "string",
         description: "Search pattern to find objects (e.g., 'Account Coverage' will find objects like 'AccountCoverage__c')"
       }
     },
-    required: ["searchPattern"]
+    required: ["instanceUrl", "accessToken", "searchPattern"]
   }
 };
 

@@ -31,6 +31,14 @@ Note: When using relationship fields:
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       objectName: {
         type: "string",
         description: "API name of the object to query"
@@ -56,11 +64,13 @@ Note: When using relationship fields:
         optional: true
       }
     },
-    required: ["objectName", "fields"]
+    required: ["instanceUrl", "accessToken", "objectName", "fields"]
   }
 };
 
 export interface QueryArgs {
+  instanceUrl: string;
+  accessToken: string;
   objectName: string;
   fields: string[];
   whereClause?: string;
