@@ -48,6 +48,14 @@ Important Rules:
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       objectName: {
         type: "string",
         description: "API name of the object to query"
@@ -64,26 +72,22 @@ Important Rules:
       },
       whereClause: {
         type: "string",
-        description: "WHERE clause to filter rows BEFORE grouping (cannot contain aggregate functions)",
-        optional: true
+        description: "WHERE clause to filter rows BEFORE grouping (cannot contain aggregate functions)"
       },
       havingClause: {
         type: "string",
-        description: "HAVING clause to filter results AFTER grouping (use for aggregate conditions)",
-        optional: true
+        description: "HAVING clause to filter results AFTER grouping (use for aggregate conditions)"
       },
       orderBy: {
         type: "string",
-        description: "ORDER BY clause - can only use grouped fields or aggregate functions",
-        optional: true
+        description: "ORDER BY clause - can only use grouped fields or aggregate functions"
       },
       limit: {
         type: "number",
-        description: "Maximum number of grouped results to return",
-        optional: true
+        description: "Maximum number of grouped results to return"
       }
     },
-    required: ["objectName", "selectFields", "groupByFields"]
+    required: ["instanceUrl", "accessToken", "objectName", "selectFields", "groupByFields"]
   }
 };
 

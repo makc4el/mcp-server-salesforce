@@ -35,6 +35,14 @@ Notes:
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       className: {
         type: "string",
         description: "Name of a specific Apex class to read"
@@ -47,7 +55,8 @@ Notes:
         type: "boolean",
         description: "Whether to include metadata about the Apex classes"
       }
-    }
+    },
+    required: ["instanceUrl", "accessToken"]
   }
 };
 

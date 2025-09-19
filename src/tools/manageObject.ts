@@ -11,6 +11,14 @@ export const MANAGE_OBJECT: Tool = {
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       operation: {
         type: "string",
         enum: ["create", "update"],
@@ -31,32 +39,27 @@ export const MANAGE_OBJECT: Tool = {
       description: {
         type: "string",
         description: "Description of the object",
-        optional: true
       },
       nameFieldLabel: {
         type: "string",
         description: "Label for the name field",
-        optional: true
       },
       nameFieldType: {
         type: "string",
         enum: ["Text", "AutoNumber"],
         description: "Type of the name field",
-        optional: true
       },
       nameFieldFormat: {
         type: "string",
         description: "Display format for AutoNumber field (e.g., 'A-{0000}')",
-        optional: true
       },
       sharingModel: {
         type: "string",
         enum: ["ReadWrite", "Read", "Private", "ControlledByParent"],
         description: "Sharing model for the object",
-        optional: true
       }
     },
-    required: ["operation", "objectName"]
+    required: ["instanceUrl", "accessToken", "operation", "objectName"]
   }
 };
 

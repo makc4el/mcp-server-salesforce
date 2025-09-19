@@ -49,6 +49,14 @@ Notes:
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       operation: {
         type: "string",
         enum: ["enable", "disable", "retrieve"],
@@ -80,7 +88,7 @@ Notes:
         description: "Whether to include the full log content (optional, defaults to false)"
       }
     },
-    required: ["operation", "username"]
+    required: ["instanceUrl", "accessToken", "operation", "username"]
   }
 };
 

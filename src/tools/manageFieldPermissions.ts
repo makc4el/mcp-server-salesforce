@@ -14,6 +14,14 @@ export const MANAGE_FIELD_PERMISSIONS: Tool = {
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       operation: {
         type: "string",
         enum: ["grant", "revoke", "view"],
@@ -31,20 +39,17 @@ export const MANAGE_FIELD_PERMISSIONS: Tool = {
         type: "array",
         items: { type: "string" },
         description: "Names of profiles to grant/revoke access (e.g., ['System Administrator', 'Sales User'])",
-        optional: true
       },
       readable: {
         type: "boolean",
         description: "Grant/revoke read access (default: true)",
-        optional: true
       },
       editable: {
         type: "boolean",
         description: "Grant/revoke edit access (default: true)",
-        optional: true
       }
     },
-    required: ["operation", "objectName", "fieldName"]
+    required: ["instanceUrl", "accessToken", "operation", "objectName", "fieldName"]
   }
 };
 

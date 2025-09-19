@@ -34,6 +34,14 @@ Notes:
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       apexCode: {
         type: "string",
         description: "Apex code to execute anonymously"
@@ -44,7 +52,7 @@ Notes:
         description: "Log level for debug logs (optional, defaults to DEBUG)"
       }
     },
-    required: ["apexCode"]
+    required: ["instanceUrl", "accessToken", "apexCode"]
   }
 };
 

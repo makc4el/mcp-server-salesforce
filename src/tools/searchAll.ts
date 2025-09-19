@@ -40,6 +40,14 @@ Notes:
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       searchTerm: {
         type: "string",
         description: "Text to search for (supports wildcards * and ?)"
@@ -47,8 +55,7 @@ Notes:
       searchIn: {
         type: "string",
         enum: ["ALL FIELDS", "NAME FIELDS", "EMAIL FIELDS", "PHONE FIELDS", "SIDEBAR FIELDS"],
-        description: "Which fields to search in",
-        optional: true
+        description: "Which fields to search in"
       },
       objects: {
         type: "array",
@@ -66,18 +73,15 @@ Notes:
             },
             where: {
               type: "string",
-              description: "WHERE clause for this object",
-              optional: true
+              description: "WHERE clause for this object"
             },
             orderBy: {
               type: "string",
-              description: "ORDER BY clause for this object",
-              optional: true
+              description: "ORDER BY clause for this object"
             },
             limit: {
               type: "number",
-              description: "Maximum number of records to return for this object",
-              optional: true
+              description: "Maximum number of records to return for this object"
             }
           },
           required: ["name", "fields"]
@@ -109,20 +113,17 @@ Notes:
           required: ["type"]
         },
         description: "Additional WITH clauses for the search",
-        optional: true
       },
       updateable: {
         type: "boolean",
-        description: "Return only updateable records",
-        optional: true
+        description: "Return only updateable records"
       },
       viewable: {
         type: "boolean",
-        description: "Return only viewable records",
-        optional: true
+        description: "Return only viewable records"
       }
     },
-    required: ["searchTerm", "objects"]
+    required: ["instanceUrl", "accessToken", "searchTerm", "objects"]
   }
 };
 

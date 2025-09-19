@@ -50,18 +50,15 @@ Note: When using relationship fields:
       },
       whereClause: {
         type: "string",
-        description: "WHERE clause, can include conditions on related objects",
-        optional: true
+        description: "WHERE clause, can include conditions on related objects"
       },
       orderBy: {
         type: "string",
-        description: "ORDER BY clause, can include fields from related objects",
-        optional: true
+        description: "ORDER BY clause, can include fields from related objects"
       },
       limit: {
         type: "number",
-        description: "Maximum number of records to return",
-        optional: true
+        description: "Maximum number of records to return"
       }
     },
     required: ["instanceUrl", "accessToken", "objectName", "fields"]

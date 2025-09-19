@@ -36,8 +36,7 @@ export const DML_RECORDS: Tool = {
       },
       externalIdField: {
         type: "string",
-        description: "External ID field name for upsert operations",
-        optional: true
+        description: "External ID field name for upsert operations"
       }
     },
     required: ["instanceUrl", "accessToken", "operation", "objectName", "records"]

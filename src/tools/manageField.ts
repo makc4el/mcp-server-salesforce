@@ -13,6 +13,14 @@ export const MANAGE_FIELD: Tool = {
   inputSchema: {
     type: "object",
     properties: {
+      instanceUrl: {
+        type: "string",
+        description: "Salesforce instance URL (e.g., https://your-org.my.salesforce.com)"
+      },
+      accessToken: {
+        type: "string",
+        description: "Valid Salesforce access token for authentication"
+      },
       operation: {
         type: "string",
         enum: ["create", "update"],
@@ -28,67 +36,55 @@ export const MANAGE_FIELD: Tool = {
       },
       label: {
         type: "string",
-        description: "Label for the field",
-        optional: true
+        description: "Label for the field"
       },
       type: {
         type: "string",
         enum: ["Checkbox", "Currency", "Date", "DateTime", "Email", "Number", "Percent", 
                "Phone", "Picklist", "MultiselectPicklist", "Text", "TextArea", "LongTextArea", 
                "Html", "Url", "Lookup", "MasterDetail"],
-        description: "Field type (required for create)",
-        optional: true
+        description: "Field type (required for create)"
       },
       required: {
         type: "boolean",
         description: "Whether the field is required",
-        optional: true
       },
       unique: {
         type: "boolean",
         description: "Whether the field value must be unique",
-        optional: true
       },
       externalId: {
         type: "boolean",
         description: "Whether the field is an external ID",
-        optional: true
       },
       length: {
         type: "number",
         description: "Length for text fields",
-        optional: true
       },
       precision: {
         type: "number",
         description: "Precision for numeric fields",
-        optional: true
       },
       scale: {
         type: "number",
         description: "Scale for numeric fields",
-        optional: true
       },
       referenceTo: {
         type: "string",
         description: "API name of the object to reference (for Lookup/MasterDetail)",
-        optional: true
       },
       relationshipLabel: {
         type: "string",
         description: "Label for the relationship (for Lookup/MasterDetail)",
-        optional: true
       },
       relationshipName: {
         type: "string",
         description: "API name for the relationship (for Lookup/MasterDetail)",
-        optional: true
       },
       deleteConstraint: {
         type: "string",
         enum: ["Cascade", "Restrict", "SetNull"],
         description: "Delete constraint for Lookup fields",
-        optional: true
       },
       picklistValues: {
         type: "array",
@@ -100,21 +96,18 @@ export const MANAGE_FIELD: Tool = {
           }
         },
         description: "Values for Picklist/MultiselectPicklist fields",
-        optional: true
       },
       description: {
         type: "string",
         description: "Description of the field",
-        optional: true
       },
       grantAccessTo: {
         type: "array",
         items: { type: "string" },
         description: "Profile names to grant field access to (defaults to ['System Administrator'])",
-        optional: true
       }
     },
-    required: ["operation", "objectName", "fieldName"]
+    required: ["instanceUrl", "accessToken", "operation", "objectName", "fieldName"]
   }
 };
 
