@@ -8,7 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import * as dotenv from "dotenv";
 
-import { createSalesforceConnection } from "./utils/connection.js";
+import { createSalesforceConnection, type SalesforceCredentials } from "./utils/connection.js";
 import { SEARCH_OBJECTS, handleSearchObjects } from "./tools/search.js";
 import { DESCRIBE_OBJECT, handleDescribeObject } from "./tools/describe.js";
 import { QUERY_RECORDS, handleQueryRecords, QueryArgs } from "./tools/query.js";
@@ -27,6 +27,42 @@ import { MANAGE_DEBUG_LOGS, handleManageDebugLogs, ManageDebugLogsArgs } from ".
 
 dotenv.config();
 
+// Global connection for classic MCP server (configured once)
+let globalConnection: any;
+let globalCredentials: SalesforceCredentials | undefined;
+
+// Initialize connection from environment variables
+async function initializeConnection() {
+  try {
+    // Check for required credentials
+    const accessToken = process.env.SALESFORCE_ACCESS_TOKEN;
+    if (!accessToken) {
+      console.error("❌ SALESFORCE_ACCESS_TOKEN is required for classic MCP server");
+      console.error("💡 Get it from: sf org display --verbose (look for 'Access Token')");
+      process.exit(1);
+    }
+
+    // We need instance URL - try to get from access token or require it
+    let instanceUrl = process.env.SALESFORCE_INSTANCE_URL;
+    if (!instanceUrl) {
+      console.error("❌ SALESFORCE_INSTANCE_URL is required for classic MCP server");
+      console.error("💡 Example: https://your-org.my.salesforce.com");
+      process.exit(1);
+    }
+
+    globalCredentials = {
+      instanceUrl,
+      accessToken
+    };
+
+    globalConnection = await createSalesforceConnection(globalCredentials);
+    console.error(`✅ Connected to Salesforce: ${instanceUrl}`);
+  } catch (error) {
+    console.error("❌ Failed to initialize Salesforce connection:", error);
+    process.exit(1);
+  }
+}
+
 const server = new Server(
   {
     name: "salesforce-mcp-server",
@@ -39,25 +75,333 @@ const server = new Server(
   },
 );
 
+// Classic MCP tool definitions (without auth parameters)
+const CLASSIC_MCP_TOOLS = [
+  {
+    ...SEARCH_OBJECTS,
+    inputSchema: {
+      type: "object",
+      properties: {
+        searchPattern: {
+          type: "string",
+          description: "Search pattern to find objects (e.g., 'Account Coverage' will find objects like 'AccountCoverage__c')"
+        }
+      },
+      required: ["searchPattern"]
+    }
+  },
+  {
+    ...DESCRIBE_OBJECT,
+    inputSchema: {
+      type: "object",
+      properties: {
+        objectName: {
+          type: "string",
+          description: "API name of the Salesforce object to describe"
+        }
+      },
+      required: ["objectName"]
+    }
+  },
+  {
+    ...QUERY_RECORDS,
+    inputSchema: {
+      type: "object",
+      properties: {
+        objectName: {
+          type: "string",
+          description: "API name of the object to query"
+        },
+        fields: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of fields to select"
+        },
+        whereClause: {
+          type: "string",
+          description: "Optional WHERE clause for filtering"
+        },
+        orderBy: {
+          type: "string",
+          description: "Optional ORDER BY clause"
+        },
+        limit: {
+          type: "number",
+          description: "Optional limit for number of records"
+        }
+      },
+      required: ["objectName", "fields"]
+    }
+  },
+  {
+    ...AGGREGATE_QUERY,
+    inputSchema: {
+      type: "object",
+      properties: {
+        objectName: {
+          type: "string",
+          description: "API name of the object to query"
+        },
+        selectFields: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of select fields (including aggregate functions)"
+        },
+        groupByFields: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of fields to group by"
+        },
+        whereClause: {
+          type: "string",
+          description: "Optional WHERE clause for filtering"
+        },
+        havingClause: {
+          type: "string",
+          description: "Optional HAVING clause for grouped data filtering"
+        },
+        orderBy: {
+          type: "string",
+          description: "Optional ORDER BY clause"
+        },
+        limit: {
+          type: "number",
+          description: "Optional limit for number of records"
+        }
+      },
+      required: ["objectName", "selectFields", "groupByFields"]
+    }
+  },
+  {
+    ...DML_RECORDS,
+    inputSchema: {
+      type: "object",
+      properties: {
+        operation: {
+          type: "string",
+          enum: ["insert", "update", "delete", "upsert"],
+          description: "Type of DML operation to perform"
+        },
+        objectName: {
+          type: "string",
+          description: "API name of the object"
+        },
+        records: {
+          type: "array",
+          items: { type: "object" },
+          description: "Array of records to process"
+        },
+        externalIdField: {
+          type: "string",
+          description: "External ID field name for upsert operations"
+        }
+      },
+      required: ["operation", "objectName", "records"]
+    }
+  },
+  {
+    ...SEARCH_ALL,
+    inputSchema: {
+      type: "object",
+      properties: {
+        searchTerm: {
+          type: "string",
+          description: "The search term to find across objects"
+        },
+        searchIn: {
+          type: "string",
+          enum: ["ALL FIELDS", "NAME FIELDS", "EMAIL FIELDS", "PHONE FIELDS", "SIDEBAR FIELDS"],
+          description: "Where to search"
+        },
+        objects: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              fields: { type: "array", items: { type: "string" } },
+              where: { type: "string" },
+              orderBy: { type: "string" },
+              limit: { type: "number" }
+            },
+            required: ["name", "fields"]
+          },
+          description: "Objects to search in"
+        },
+        withClauses: {
+          type: "array",
+          description: "Optional WITH clauses"
+        },
+        updateable: {
+          type: "boolean",
+          description: "Only return updateable objects"
+        },
+        viewable: {
+          type: "boolean", 
+          description: "Only return viewable objects"
+        }
+      },
+      required: ["searchTerm", "objects"]
+    }
+  },
+  {
+    ...READ_APEX,
+    inputSchema: {
+      type: "object",
+      properties: {
+        className: {
+          type: "string",
+          description: "Name of the Apex class to read"
+        },
+        namePattern: {
+          type: "string",
+          description: "Pattern to match class names (supports wildcards * and ?)"
+        },
+        includeMetadata: {
+          type: "boolean",
+          description: "Include metadata information"
+        }
+      }
+    }
+  },
+  {
+    ...WRITE_APEX,
+    inputSchema: {
+      type: "object",
+      properties: {
+        operation: {
+          type: "string",
+          enum: ["create", "update"],
+          description: "Whether to create new class or update existing"
+        },
+        className: {
+          type: "string",
+          description: "Name of the Apex class"
+        },
+        apiVersion: {
+          type: "string",
+          description: "API version for the class"
+        },
+        body: {
+          type: "string",
+          description: "Apex class source code"
+        }
+      },
+      required: ["operation", "className", "body"]
+    }
+  },
+  {
+    ...READ_APEX_TRIGGER,
+    inputSchema: {
+      type: "object",
+      properties: {
+        triggerName: {
+          type: "string",
+          description: "Name of the Apex trigger to read"
+        },
+        namePattern: {
+          type: "string",
+          description: "Pattern to match trigger names (supports wildcards * and ?)"
+        },
+        includeMetadata: {
+          type: "boolean",
+          description: "Include metadata information"
+        }
+      }
+    }
+  },
+  {
+    ...WRITE_APEX_TRIGGER,
+    inputSchema: {
+      type: "object",
+      properties: {
+        operation: {
+          type: "string",
+          enum: ["create", "update"],
+          description: "Whether to create new trigger or update existing"
+        },
+        triggerName: {
+          type: "string",
+          description: "Name of the Apex trigger"
+        },
+        objectName: {
+          type: "string",
+          description: "Name of the object the trigger is for"
+        },
+        apiVersion: {
+          type: "string",
+          description: "API version for the trigger"
+        },
+        body: {
+          type: "string",
+          description: "Apex trigger source code"
+        }
+      },
+      required: ["operation", "triggerName", "body"]
+    }
+  },
+  {
+    ...EXECUTE_ANONYMOUS,
+    inputSchema: {
+      type: "object",
+      properties: {
+        apexCode: {
+          type: "string",
+          description: "Apex code to execute"
+        },
+        logLevel: {
+          type: "string",
+          enum: ["NONE", "ERROR", "WARN", "INFO", "DEBUG", "FINE", "FINER", "FINEST"],
+          description: "Debug log level"
+        }
+      },
+      required: ["apexCode"]
+    }
+  },
+  {
+    ...MANAGE_DEBUG_LOGS,
+    inputSchema: {
+      type: "object", 
+      properties: {
+        operation: {
+          type: "string",
+          enum: ["enable", "disable", "retrieve"],
+          description: "Debug log operation to perform"
+        },
+        username: {
+          type: "string",
+          description: "Username for debug log management"
+        },
+        logLevel: {
+          type: "string",
+          enum: ["NONE", "ERROR", "WARN", "INFO", "DEBUG", "FINE", "FINER", "FINEST"],
+          description: "Debug log level"
+        },
+        expirationTime: {
+          type: "number",
+          description: "Expiration time in minutes"
+        },
+        limit: {
+          type: "number",
+          description: "Number of logs to retrieve"
+        },
+        logId: {
+          type: "string",
+          description: "Specific log ID to retrieve"
+        },
+        includeBody: {
+          type: "boolean",
+          description: "Include log body content"
+        }
+      },
+      required: ["operation", "username"]
+    }
+  }
+];
+
 // Tool handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    SEARCH_OBJECTS, 
-    DESCRIBE_OBJECT, 
-    QUERY_RECORDS, 
-    AGGREGATE_QUERY,
-    DML_RECORDS,
-    MANAGE_OBJECT,
-    MANAGE_FIELD,
-    MANAGE_FIELD_PERMISSIONS,
-    SEARCH_ALL,
-    READ_APEX,
-    WRITE_APEX,
-    READ_APEX_TRIGGER,
-    WRITE_APEX_TRIGGER,
-    EXECUTE_ANONYMOUS,
-    MANAGE_DEBUG_LOGS
-  ],
+  tools: CLASSIC_MCP_TOOLS,
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -65,49 +409,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     if (!args) throw new Error('Arguments are required');
 
-    // Extract auth credentials from tool call arguments (per-request authentication)
-    const { instanceUrl, accessToken, ...toolArgs } = args as Record<string, any>;
-    
-    if (!instanceUrl || !accessToken) {
-      throw new Error(
-        'instanceUrl and accessToken are required in tool call arguments. ' +
-        'These should be obtained from your external authentication provider (e.g., Supabase callback).'
-      );
+    // Use global connection for classic MCP server
+    if (!globalConnection || !globalCredentials) {
+      throw new Error('Salesforce connection not initialized. Check your environment variables.');
     }
-
-    const conn = await createSalesforceConnection({
-      instanceUrl: instanceUrl as string,
-      accessToken: accessToken as string
-    });
 
     switch (name) {
       case "salesforce_search_objects": {
-        const { searchPattern } = toolArgs as { searchPattern: string };
+        const { searchPattern } = args as { searchPattern: string };
         if (!searchPattern) throw new Error('searchPattern is required');
-        return await handleSearchObjects(conn, searchPattern);
+        return await handleSearchObjects(globalConnection, searchPattern);
       }
 
       case "salesforce_describe_object": {
-        const { objectName } = toolArgs as { objectName: string };
+        const { objectName } = args as { objectName: string };
         if (!objectName) throw new Error('objectName is required');
-        return await handleDescribeObject(conn, objectName);
+        return await handleDescribeObject(globalConnection, objectName);
       }
 
       case "salesforce_query_records": {
-        if (!toolArgs.objectName || !Array.isArray(toolArgs.fields)) {
+        if (!args.objectName || !Array.isArray(args.fields)) {
           throw new Error('objectName and fields array are required for query');
         }
         // Type check and conversion - include auth parameters for the handler
         const validatedArgs: QueryArgs = {
-          instanceUrl: instanceUrl as string,
-          accessToken: accessToken as string,
-          objectName: toolArgs.objectName as string,
-          fields: toolArgs.fields as string[],
-          whereClause: toolArgs.whereClause as string | undefined,
-          orderBy: toolArgs.orderBy as string | undefined,
-          limit: toolArgs.limit as number | undefined
+          instanceUrl: globalCredentials.instanceUrl,
+          accessToken: globalCredentials.accessToken,
+          objectName: args.objectName as string,
+          fields: args.fields as string[],
+          whereClause: args.whereClause as string | undefined,
+          orderBy: args.orderBy as string | undefined,
+          limit: args.limit as number | undefined
         };
-        return await handleQueryRecords(conn, validatedArgs);
+        return await handleQueryRecords(globalConnection, validatedArgs);
       }
 
       case "salesforce_aggregate_query": {
@@ -125,20 +459,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           orderBy: aggregateArgs.orderBy as string | undefined,
           limit: aggregateArgs.limit as number | undefined
         };
-        return await handleAggregateQuery(conn, validatedArgs);
+        return await handleAggregateQuery(globalConnection, validatedArgs);
       }
 
       case "salesforce_dml_records": {
-        if (!toolArgs.operation || !toolArgs.objectName || !Array.isArray(toolArgs.records)) {
+        if (!args.operation || !args.objectName || !Array.isArray(args.records)) {
           throw new Error('operation, objectName, and records array are required for DML');
         }
         const validatedArgs: DMLArgs = {
-          operation: toolArgs.operation as 'insert' | 'update' | 'delete' | 'upsert',
-          objectName: toolArgs.objectName as string,
-          records: toolArgs.records as Record<string, any>[],
-          externalIdField: toolArgs.externalIdField as string | undefined
+          operation: args.operation as 'insert' | 'update' | 'delete' | 'upsert',
+          objectName: args.objectName as string,
+          records: args.records as Record<string, any>[],
+          externalIdField: args.externalIdField as string | undefined
         };
-        return await handleDMLRecords(conn, validatedArgs);
+        return await handleDMLRecords(globalConnection, validatedArgs);
       }
 
       case "salesforce_manage_object": {
@@ -157,7 +491,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           nameFieldFormat: objectArgs.nameFieldFormat as string | undefined,
           sharingModel: objectArgs.sharingModel as 'ReadWrite' | 'Read' | 'Private' | 'ControlledByParent' | undefined
         };
-        return await handleManageObject(conn, validatedArgs);
+        return await handleManageObject(globalConnection, validatedArgs);
       }
 
       case "salesforce_manage_field": {
@@ -185,7 +519,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           description: fieldArgs.description as string | undefined,
           grantAccessTo: fieldArgs.grantAccessTo as string[] | undefined
         };
-        return await handleManageField(conn, validatedArgs);
+        return await handleManageField(globalConnection, validatedArgs);
       }
 
       case "salesforce_manage_field_permissions": {
@@ -201,7 +535,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           readable: permArgs.readable as boolean | undefined,
           editable: permArgs.editable as boolean | undefined
         };
-        return await handleManageFieldPermissions(conn, validatedArgs);
+        return await handleManageFieldPermissions(globalConnection, validatedArgs);
       }
 
       case "salesforce_search_all": {
@@ -232,7 +566,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           viewable: searchArgs.viewable as boolean | undefined
         };
 
-        return await handleSearchAll(conn, validatedArgs);
+        return await handleSearchAll(globalConnection, validatedArgs);
       }
 
       case "salesforce_read_apex": {
@@ -245,7 +579,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           includeMetadata: apexArgs.includeMetadata as boolean | undefined
         };
 
-        return await handleReadApex(conn, validatedArgs);
+        return await handleReadApex(globalConnection, validatedArgs);
       }
 
       case "salesforce_write_apex": {
@@ -262,7 +596,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           body: apexArgs.body as string
         };
 
-        return await handleWriteApex(conn, validatedArgs);
+        return await handleWriteApex(globalConnection, validatedArgs);
       }
 
       case "salesforce_read_apex_trigger": {
@@ -275,7 +609,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           includeMetadata: triggerArgs.includeMetadata as boolean | undefined
         };
 
-        return await handleReadApexTrigger(conn, validatedArgs);
+        return await handleReadApexTrigger(globalConnection, validatedArgs);
       }
 
       case "salesforce_write_apex_trigger": {
@@ -293,7 +627,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           body: triggerArgs.body as string
         };
 
-        return await handleWriteApexTrigger(conn, validatedArgs);
+        return await handleWriteApexTrigger(globalConnection, validatedArgs);
       }
 
       case "salesforce_execute_anonymous": {
@@ -308,7 +642,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           logLevel: executeArgs.logLevel as 'NONE' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'FINE' | 'FINER' | 'FINEST' | undefined
         };
 
-        return await handleExecuteAnonymous(conn, validatedArgs);
+        return await handleExecuteAnonymous(globalConnection, validatedArgs);
       }
 
       case "salesforce_manage_debug_logs": {
@@ -328,7 +662,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           includeBody: debugLogsArgs.includeBody as boolean | undefined
         };
 
-        return await handleManageDebugLogs(conn, validatedArgs);
+        return await handleManageDebugLogs(globalConnection, validatedArgs);
       }
 
       default:
@@ -349,12 +683,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function runServer() {
+  // Initialize connection first
+  await initializeConnection();
+  
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Salesforce MCP Server running on stdio");
+  console.error("✅ Salesforce MCP Server running on stdio");
 }
 
 runServer().catch((error) => {
-  console.error("Fatal error running server:", error);
+  console.error("❌ Fatal error running server:", error);
   process.exit(1);
 });

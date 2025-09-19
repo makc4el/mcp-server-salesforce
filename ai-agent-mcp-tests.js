@@ -11,7 +11,7 @@
  * The AI agent should provide auth data in this format:
  * {
  *   "success": true,
- *   "instanceUrl": "https://orgfarm-a3ae3ef50e-dev-ed.develop.my.salesforce.com",
+ *   "instanceUrl": "https://your-org.my.salesforce.com",
  *   "accessToken": "YOUR_REAL_ACCESS_TOKEN_HERE",
  *   "tokenType": "Bearer",
  *   "refreshToken": "YOUR_REAL_REFRESH_TOKEN_HERE",
@@ -504,7 +504,7 @@ async function runExampleTest() {
   // Example AI Agent auth data - replace with actual data from your AI agent
   const exampleAuthData = {
     "success": true,
-    "instanceUrl": "https://orgfarm-a3ae3ef50e-dev-ed.develop.my.salesforce.com",
+    "instanceUrl": "https://your-org.my.salesforce.com",
     "accessToken": "YOUR_REAL_ACCESS_TOKEN_HERE",
     "tokenType": "Bearer",
     "refreshToken": "YOUR_REAL_REFRESH_TOKEN_HERE",

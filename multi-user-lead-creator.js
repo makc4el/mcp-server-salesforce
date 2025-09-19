@@ -190,7 +190,7 @@ const exampleUserData = {
   callbackData: {
     timestamp: '2025-09-16T22:12:35.304Z',
     query: {
-      code: 'aPrx.ppuB8UlvcFDyjAB7jdDs8YwZyVMdC2CIxMktZEpr0pIC8jKGkMaWxwdC24A1rsmob2KlA=='
+      code: 'aPrx.YOUR_AUTHORIZATION_CODE_HERE'
     },
     headers: {
       host: 'localhost:3000',

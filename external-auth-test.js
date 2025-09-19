@@ -24,8 +24,8 @@ dotenv.config();
 
 // Test data - replace with your actual values
 const testCredentials = {
-  "instanceUrl": "https://orgfarm-a3ae3ef50e-dev-ed.develop.lightning.force.com/",
-  "authCode": "aPrx.ppuB8UlvcFDyjAB7jdDs0Vq5ukyVV4CBLWmsq5QWK_ZEcdqhkb.HArFHDP0OMUCDq0BIA=="
+  "instanceUrl": "https://your-org.my.salesforce.com/",
+  "authCode": "aPrx.YOUR_AUTHORIZATION_CODE_HERE"
 };
 
 // IMPORTANT: Update these values with your actual Salesforce org instanceUrl and fresh authCode

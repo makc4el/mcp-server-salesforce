@@ -21,7 +21,7 @@ async function aiAgentCreateLead() {
   // Step 1: AI Agent gets this data from Salesforce OAuth (EXAMPLE - REPLACE WITH REAL CREDENTIALS)
   const authDataFromSalesforceOAuth = {
     "success": true,
-    "instanceUrl": "https://orgfarm-a3ae3ef50e-dev-ed.develop.my.salesforce.com",
+    "instanceUrl": "https://your-org.my.salesforce.com",
     "accessToken": "YOUR_REAL_ACCESS_TOKEN_HERE",
     "tokenType": "Bearer", 
     "refreshToken": "YOUR_REAL_REFRESH_TOKEN_HERE",

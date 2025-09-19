@@ -31,7 +31,7 @@ async function testWithFreshCode() {
     }
     
     try {
-        const instanceUrl = 'https://orgfarm-a3ae3ef50e-dev-ed.develop.lightning.force.com';
+        const instanceUrl = 'https://your-org.lightning.force.com';
         const authCode = await askQuestion('🔑 Enter your FRESH auth code: ');
         
         console.log(`\n🧪 Testing immediately with fresh code...`);
@@ -84,7 +84,7 @@ async function testWithFreshCode() {
 const argAuthCode = process.argv[2];
 if (argAuthCode) {
     console.log('🔑 Using auth code from command line argument');
-    const instanceUrl = 'https://orgfarm-a3ae3ef50e-dev-ed.develop.lightning.force.com';
+    const instanceUrl = 'https://your-org.lightning.force.com';
     
     (async () => {
         try {

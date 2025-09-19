@@ -66,7 +66,7 @@ const mcpRequest = {
           LastName: "TestLead",
           FirstName: "AI",
           Company: "AI Test Company",
-          Email: "ai.test@example.com"
+          Email: "test@example.com"
         }
       ]
     }
