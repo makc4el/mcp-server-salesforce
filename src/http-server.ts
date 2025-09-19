@@ -654,8 +654,104 @@ app.post('/mcp', async (req: Request, res: Response) => {
       const conn = await createSalesforceConnection(dynamicCredentials);
       let result: any;
 
-      // Use the same tool execution logic as the REST endpoint
+      // Use consistent tool names with /tools endpoint
       switch (toolName) {
+        case "salesforce_search_objects": {
+          const { searchPattern } = args as { searchPattern: string };
+          if (!searchPattern) throw new Error('searchPattern is required');
+          result = await handleSearchObjects(conn, searchPattern);
+          break;
+        }
+
+        case "salesforce_describe_object": {
+          const { objectName } = args as { objectName: string };
+          if (!objectName) throw new Error('objectName is required');
+          result = await handleDescribeObject(conn, objectName);
+          break;
+        }
+
+        case "salesforce_query_records": {
+          const queryArgs = args as Record<string, unknown>;
+          if (!queryArgs.objectName || !Array.isArray(queryArgs.fields)) {
+            throw new Error('objectName and fields array are required for query');
+          }
+          const validatedArgs: QueryArgs = {
+            instanceUrl: dynamicCredentials.instanceUrl,
+            accessToken: dynamicCredentials.accessToken,
+            objectName: queryArgs.objectName as string,
+            fields: queryArgs.fields as string[],
+            whereClause: queryArgs.whereClause as string | undefined,
+            orderBy: queryArgs.orderBy as string | undefined,
+            limit: queryArgs.limit as number | undefined
+          };
+          result = await handleQueryRecords(conn, validatedArgs);
+          break;
+        }
+
+        case "salesforce_aggregate_query": {
+          const aggregateArgs = args as Record<string, unknown>;
+          if (!aggregateArgs.objectName || !Array.isArray(aggregateArgs.selectFields) || !Array.isArray(aggregateArgs.groupByFields)) {
+            throw new Error('objectName, selectFields array, and groupByFields array are required for aggregate query');
+          }
+          const validatedArgs: AggregateQueryArgs = {
+            objectName: aggregateArgs.objectName as string,
+            selectFields: aggregateArgs.selectFields as string[],
+            groupByFields: aggregateArgs.groupByFields as string[],
+            whereClause: aggregateArgs.whereClause as string | undefined,
+            havingClause: aggregateArgs.havingClause as string | undefined,
+            orderBy: aggregateArgs.orderBy as string | undefined,
+            limit: aggregateArgs.limit as number | undefined
+          };
+          result = await handleAggregateQuery(conn, validatedArgs);
+          break;
+        }
+
+        case "salesforce_dml_records": {
+          const dmlArgs = args as Record<string, unknown>;
+          if (!dmlArgs.operation || !dmlArgs.objectName || !Array.isArray(dmlArgs.records)) {
+            throw new Error('operation, objectName, and records array are required for DML');
+          }
+          const validatedArgs: DMLArgs = {
+            operation: dmlArgs.operation as 'insert' | 'update' | 'delete' | 'upsert',
+            objectName: dmlArgs.objectName as string,
+            records: dmlArgs.records as Record<string, any>[],
+            externalIdField: dmlArgs.externalIdField as string | undefined
+          };
+          result = await handleDMLRecords(conn, validatedArgs);
+          break;
+        }
+
+        case "salesforce_search_all": {
+          const searchArgs = args as Record<string, unknown>;
+          if (!searchArgs.searchTerm || !Array.isArray(searchArgs.objects)) {
+            throw new Error('searchTerm and objects array are required for search');
+          }
+
+          const objects = searchArgs.objects as Array<Record<string, unknown>>;
+          if (!objects.every(obj => obj.name && Array.isArray(obj.fields))) {
+            throw new Error('Each object must specify name and fields array');
+          }
+
+          const validatedArgs: SearchAllArgs = {
+            searchTerm: searchArgs.searchTerm as string,
+            searchIn: searchArgs.searchIn as "ALL FIELDS" | "NAME FIELDS" | "EMAIL FIELDS" | "PHONE FIELDS" | "SIDEBAR FIELDS" | undefined,
+            objects: objects.map(obj => ({
+              name: obj.name as string,
+              fields: obj.fields as string[],
+              where: obj.where as string | undefined,
+              orderBy: obj.orderBy as string | undefined,
+              limit: obj.limit as number | undefined
+            })),
+            withClauses: searchArgs.withClauses as WithClause[] | undefined,
+            updateable: searchArgs.updateable as boolean | undefined,
+            viewable: searchArgs.viewable as boolean | undefined
+          };
+
+          result = await handleSearchAll(conn, validatedArgs);
+          break;
+        }
+
+        // Backward compatibility with old tool names (for existing integrations)
         case "search": {
           const { searchTerm } = args as { searchTerm: string };
           if (!searchTerm) throw new Error('searchTerm is required');
@@ -675,7 +771,6 @@ app.post('/mcp', async (req: Request, res: Response) => {
           if (!query) throw new Error('query is required');
           
           // For simple SOQL queries, use handleQueryRecords with parsed query
-          // This is a simplified approach - in practice, you might want to parse the SOQL
           const queryResult = await conn.query(query);
           result = {
             content: [{
@@ -703,7 +798,7 @@ app.post('/mcp', async (req: Request, res: Response) => {
 
         default:
           return res.status(400).json({
-            error: `Unknown tool: ${toolName}`
+            error: `Unknown tool: ${toolName}. Available tools: salesforce_search_objects, salesforce_describe_object, salesforce_query_records, salesforce_aggregate_query, salesforce_dml_records, salesforce_search_all`
           });
       }
 
